@@ -53,6 +53,13 @@ app.get('/', (req, res) => {
 // POST /analyze-ticket
 // Main investigation pipeline
 // ============================================================
+app.get('/analyze-ticket', (req, res) => {
+  res.status(405).json({
+    error: 'Method Not Allowed',
+    message: 'The /analyze-ticket endpoint requires a POST request with a JSON body. Please use tools like Postman or cURL to send a POST request.'
+  });
+});
+
 app.post('/analyze-ticket', (req, res) => {
   // Set timeout guard
   const timeout = setTimeout(() => {
