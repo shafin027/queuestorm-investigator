@@ -74,7 +74,8 @@ async function draftResponses(complaint, caseType, evidenceVerdict, matchedTxn, 
 Given the investigation details, draft two strings:
 1. "agent_summary": A factual 1-sentence summary for the internal human agent. Include the transaction ID and amount if available.
 2. "customer_reply": A professional response to the customer in their language (${language === 'bn' ? 'Bengali' : 'English'}).
-   CRITICAL SAFETY RULE: The customer_reply MUST NOT ask the customer to share their PIN, OTP, or password.
+   CRITICAL SAFETY RULE: You MUST append this exact sentence at the end of the customer_reply: "Please do not share your PIN or OTP with anyone." (Translate to Bengali if language is bn: "অনুগ্রহ করে আপনার পিন বা ওটিপি কারও সাথে শেয়ার করবেন না।")
+   You MUST NEVER promise a refund.
 
 Return a JSON object exactly like this:
 {"agent_summary": "...", "customer_reply": "..."}`

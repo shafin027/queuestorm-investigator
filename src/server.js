@@ -181,8 +181,15 @@ app.post('/analyze-ticket', async (req, res) => {
     const safetyCheck = validateSafety(customerReply, recommendedNextAction);
     if (!safetyCheck.isSafe) {
       console.error(`[SAFETY VIOLATION] Ticket ${validatedRequest.ticket_id}:`, safetyCheck.violations);
-      // This should never happen with our template-based approach
-      // but if it does, we fall back to the safest possible reply
+      // Fallback to the safest possible deterministic reply
+      customerReply = generateCustomerReply(
+        investigation.caseType,
+        investigation.matchedTxn,
+        investigation.language,
+        investigation.userType,
+        investigation.evidenceVerdict,
+        investigation.isAmbiguous
+      );
     }
 
     // ─── Step 9: Build final response ──────────────────────────────────
