@@ -100,6 +100,9 @@ function requiresHumanReview(caseType, evidenceVerdict, severity, matchedTxn, is
   // Phishing is always human review
   if (caseType === 'phishing_or_social_engineering') return true;
 
+  // Ambiguous cases require clarification from the customer first, not a human agent
+  if (isAmbiguous) return false;
+
   // Inconsistent evidence always needs human review
   if (evidenceVerdict === 'inconsistent') return true;
 

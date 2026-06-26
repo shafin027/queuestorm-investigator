@@ -50,7 +50,7 @@ const CASE_KEYWORDS = {
     'typed it wrong', 'wrong account', 'wrong mobile',
     'accidentally sent', 'sent to wrong', 'by mistake',
     'sent money to wrong', 'sent taka to wrong', 'wrong bkash', 'wrong nagad',
-    'mistakenly sent', 'sent to a wrong',
+    'mistakenly sent', 'sent to a wrong', 'didn\'t get it', 'did not get it', 'not received', 'didn\'t receive',
     'ভুল নম্বর', 'ভুলে পাঠিয়েছি', 'ভুল ব্যক্তি', 'ভুলক্রমে পাঠিয়েছি'
   ],
   refund_request: [
