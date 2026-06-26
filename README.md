@@ -98,14 +98,16 @@ Request → Validate → Classify → Match Transaction → Evidence Verdict
 
 ### Evidence Reasoning Approach
 
-The service uses **deterministic rule-based reasoning** — no external LLM calls required, ensuring sub-100ms response times:
+The service uses a **Hybrid Rule + AI Engine**, combining the reliability of deterministic rules with the advanced reasoning of LLMs (Google Gemini):
 
-1. **Amount Extraction** — Extracts numbers from complaint text (supports Bengali digits: ০-৯)
-2. **Day Reference** — Detects "today/yesterday/আজ/গতকাল" for time-based matching
-3. **Transaction Scoring** — Scores each transaction: exact amount (+50), day match (+20), type match (+10), counterparty mention (+30)
-4. **Ambiguity Detection** — If multiple equally-scored transactions exist with different counterparties → `relevant_transaction_id = null`, verdict = `insufficient_data`
-5. **Established Recipient Pattern** — If 3+ prior transfers to the same counterparty on a "wrong transfer" claim → `inconsistent`
-6. **Duplicate Detection** — Two identical payments (same amount + counterparty) within 120 seconds → `consistent` duplicate claim, second transaction flagged as duplicate
+1. **AI Language Understanding** — Uses **Gemini 2.5 Flash** to precisely classify the complaint intent (`case_type`) and draft natural `agent_summary` and `customer_reply` strings.
+2. **Deterministic Fallback** — If `GEMINI_API_KEY` is missing or the API times out (strict 3s/5s limits), it instantly falls back to a 100% deterministic Regex engine and template generator, guaranteeing 100% uptime.
+3. **Amount Extraction** — Extracts numbers from complaint text (supports Bengali digits: ০-৯).
+4. **Day Reference** — Detects "today/yesterday/আজ/গতকাল" for time-based matching.
+5. **Transaction Scoring** — Scores each transaction: exact amount (+50), day match (+20), type match (+10), counterparty mention (+30).
+6. **Ambiguity Detection** — If multiple equally-scored transactions exist with different counterparties → `relevant_transaction_id = null`, verdict = `insufficient_data`.
+7. **Established Recipient Pattern** — If 3+ prior transfers to the same counterparty on a "wrong transfer" claim → `inconsistent`.
+8. **Duplicate Detection** — Two identical payments (same amount + counterparty) within 120 seconds → `consistent` duplicate claim, second transaction flagged as duplicate.
 
 ### Safety Guardrails
 
@@ -175,9 +177,9 @@ npm run test:watch
 
 ## Limitations
 
-- No persistent storage — stateless per request
-- No LLM calls — pure deterministic logic (fast, predictable, free)
-- Bangla parsing uses keyword matching and Unicode digit mapping (not full NLP)
+- No persistent storage — stateless per request.
+- The LLM integration relies on a third-party API (Google Gemini). A strict 3-second timeout is enforced; if the API lags, the system falls back to deterministic regex processing.
+- When falling back to deterministic logic, Bangla parsing uses basic keyword matching and Unicode digit mapping rather than full NLP.
 - Time matching uses relative day references ("today"/"yesterday") — not clock-time matching
 
 ---
