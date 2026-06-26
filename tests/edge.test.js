@@ -75,6 +75,52 @@ describe('Input validation', () => {
     });
     expect([400, 422]).toContain(res.status);
   });
+
+  it('rejects invalid timestamp format in transaction_history (must be ISO UTC)', async () => {
+    const res = await request(app).post('/analyze-ticket').send({
+      ticket_id: 'TKT-EDGE-05',
+      complaint: 'Money sent to wrong person',
+      transaction_history: [
+        {
+          transaction_id: 'TXN-DATE',
+          timestamp: 'yesterday', // invalid ISO format
+          type: 'transfer',
+          amount: 1000,
+          counterparty: '+880123',
+          status: 'completed'
+        }
+      ]
+    });
+    expect([400, 422]).toContain(res.status);
+    expect(JSON.stringify(res.body)).toMatch(/datetime string/i);
+  });
+
+  it('rejects zero or negative amount in transaction_history', async () => {
+    const res = await request(app).post('/analyze-ticket').send({
+      ticket_id: 'TKT-EDGE-06',
+      complaint: 'Test zero amount',
+      transaction_history: [
+        {
+          transaction_id: 'TXN-ZERO',
+          timestamp: '2026-06-26T12:00:00Z',
+          type: 'transfer',
+          amount: 0, // must be positive
+          counterparty: '+880123',
+          status: 'completed'
+        }
+      ]
+    });
+    expect([400, 422]).toContain(res.status);
+  });
+
+  it('rejects invalid language enum', async () => {
+    const res = await request(app).post('/analyze-ticket').send({
+      ticket_id: 'TKT-EDGE-07',
+      complaint: 'Test language',
+      language: 'fr' // 'fr' is not in LANGUAGES
+    });
+    expect([400, 422]).toContain(res.status);
+  });
 });
 
 // ============================================================

@@ -37,7 +37,7 @@ const TRANSACTION_STATUSES = ['completed', 'failed', 'pending', 'reversed'];
 // ============================================================
 const TransactionSchema = z.object({
   transaction_id: z.string(),
-  timestamp: z.string(), // ISO string — we parse manually
+  timestamp: z.string().datetime({ message: "Invalid datetime string! Must be UTC." }), // ISO string — we parse manually
   type: z.enum(TRANSACTION_TYPES),
   amount: z.number().positive(),
   counterparty: z.string(),
