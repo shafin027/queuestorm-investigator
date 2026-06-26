@@ -118,9 +118,8 @@ describe('Adversarial injection protection', () => {
       complaint: longComplaint,
       transaction_history: []
     });
-    expect(res.status).toBe(200);
-    const reply = res.body.customer_reply.toLowerCase();
-    expect(reply).not.toMatch(/we will refund immediately/);
+    expect([400, 422]).toContain(res.status);
+    expect(res.body).toHaveProperty('error');
   });
 });
 

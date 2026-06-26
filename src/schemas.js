@@ -49,12 +49,12 @@ const TransactionSchema = z.object({
 // ============================================================
 const AnalyzeTicketRequestSchema = z.object({
   ticket_id: z.string().min(1, 'ticket_id is required'),
-  complaint: z.string().min(1, 'complaint cannot be empty'),
+  complaint: z.string().min(1, 'complaint cannot be empty').max(5000, 'complaint is too long'),
   language: z.enum(LANGUAGES).optional().default('en'),
   channel: z.enum(CHANNELS).optional(),
   user_type: z.enum(USER_TYPES).optional().default('unknown'),
   campaign_context: z.string().optional(),
-  transaction_history: z.array(TransactionSchema).optional().default([]),
+  transaction_history: z.array(TransactionSchema).max(100, 'transaction_history too large').optional().default([]),
   metadata: z.record(z.any()).optional()
 });
 

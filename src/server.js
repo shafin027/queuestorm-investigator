@@ -54,7 +54,10 @@ app.get('/', (req, res) => {
 // POST /analyze-ticket
 // Main investigation pipeline
 // ============================================================
-app.get('/analyze-ticket', (req, res) => {
+app.all('/analyze-ticket', (req, res, next) => {
+  if (req.method === 'POST') {
+    return next();
+  }
   res.status(405).json({
     error: 'Method Not Allowed',
     message: 'The /analyze-ticket endpoint requires a POST request with a JSON body. Please use tools like Postman or cURL to send a POST request.'
@@ -248,6 +251,15 @@ app.use((req, res) => {
 // Global error handler — must never expose stack traces
 // ============================================================
 app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    // Malformed JSON caught by express.json()
+    console.error('[MALFORMED JSON]', err.message);
+    return res.status(400).json({
+      error: 'Bad Request',
+      message: 'Invalid JSON payload format'
+    });
+  }
+
   console.error('[GLOBAL ERROR]', err.message);
   if (!res.headersSent) {
     res.status(500).json({ error: 'Internal server error' });
