@@ -38,6 +38,18 @@ app.get('/health', (req, res) => {
 });
 
 // ============================================================
+// GET /
+// Root endpoint to verify API is running
+// ============================================================
+app.get('/', (req, res) => {
+  res.status(200).json({
+    name: 'QueueStorm Investigator API',
+    status: 'running',
+    endpoints: ['GET /health', 'POST /analyze-ticket']
+  });
+});
+
+// ============================================================
 // POST /analyze-ticket
 // Main investigation pipeline
 // ============================================================
