@@ -29,7 +29,7 @@ const CASE_KEYWORDS = {
   ],
   agent_cash_in_issue: [
     'cash in', 'cash-in', 'cashin', 'এজেন্ট', 'ক্যাশ ইন', 'cash deposit',
-    'agent cash', 'cash_in', 'cash in agent', 'agent sent', 'agent balance'
+    'agent cash', 'cash_in', 'cash in agent', 'agent sent', 'agent balance', 'cashed in'
   ],
   merchant_settlement_delay: [
     'settlement', 'not settled', 'pending settlement', 'my settlement',
