@@ -175,6 +175,13 @@ npm run test:watch
 
 ---
 
+## Compliance Confirmations
+
+- **No Real Customer Data**: This project operates strictly on synthetic, fictional data. No real customer, payment, or PII data is used, stored, or processed.
+- **No Secrets Committed**: All secrets and API keys are managed securely via environment variables. No `.env` files or hardcoded credentials have been committed to the repository.
+
+---
+
 ## Limitations
 
 - No persistent storage — stateless per request.
