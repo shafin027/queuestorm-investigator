@@ -95,3 +95,51 @@ describe('API Security - Resource Exhaustion (DoS)', () => {
     expect(JSON.stringify(res.body)).toMatch(/too large/i);
   });
 });
+
+describe('API Security - VibeSec Strict Defenses', () => {
+  it('rejects Mass Assignment with strict schema (extra top-level field)', async () => {
+    const res = await request(app).post('/analyze-ticket').send({
+      ticket_id: 'TKT-VIBE-01',
+      complaint: 'Testing mass assignment',
+      is_admin: true // Rogue field
+    });
+    
+    expect([400, 422]).toContain(res.status);
+    expect(JSON.stringify(res.body)).toMatch(/unrecognized key/i);
+  });
+
+  it('rejects Mass Assignment in transaction array (extra nested field)', async () => {
+    const res = await request(app).post('/analyze-ticket').send({
+      ticket_id: 'TKT-VIBE-02',
+      complaint: 'Testing nested mass assignment',
+      transaction_history: [
+        {
+          transaction_id: 'TXN-1',
+          timestamp: '2026-06-26T12:00:00Z',
+          type: 'transfer',
+          amount: 500,
+          counterparty: '+8801700000000',
+          status: 'completed',
+          internal_db_id: 999 // Rogue field
+        }
+      ]
+    });
+    
+    expect([400, 422]).toContain(res.status);
+    expect(JSON.stringify(res.body)).toMatch(/unrecognized key/i);
+  });
+
+  it('returns Cache-Control: no-store and basic security headers', async () => {
+    const res = await request(app).post('/analyze-ticket').send({
+      ticket_id: 'TKT-VIBE-03',
+      complaint: 'Standard valid request'
+    });
+    
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+    // Helmet headers
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['x-frame-options']).toBe('SAMEORIGIN');
+    expect(res.headers['strict-transport-security']).toBeDefined();
+  });
+});

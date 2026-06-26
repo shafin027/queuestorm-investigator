@@ -5,6 +5,7 @@
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 require('dotenv').config();
 
 const { AnalyzeTicketRequestSchema, AnalyzeTicketResponseSchema } = require('./schemas');
@@ -21,6 +22,7 @@ const REQUEST_TIMEOUT_MS = 29000; // 29s — leave 1s buffer under 30s limit
 // ============================================================
 // Middleware
 // ============================================================
+app.use(helmet()); // Secure HTTP headers
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
@@ -225,6 +227,7 @@ app.post('/analyze-ticket', async (req, res) => {
     }
 
     clearTimeout(timeout);
+    res.set('Cache-Control', 'no-store'); // Prevent caching of sensitive data
     return res.status(200).json(response);
 
   } catch (err) {

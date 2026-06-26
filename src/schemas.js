@@ -42,7 +42,7 @@ const TransactionSchema = z.object({
   amount: z.number().positive(),
   counterparty: z.string(),
   status: z.enum(TRANSACTION_STATUSES)
-});
+}).strict();
 
 // ============================================================
 // Request schema — only ticket_id and complaint are required
@@ -56,7 +56,7 @@ const AnalyzeTicketRequestSchema = z.object({
   campaign_context: z.string().optional(),
   transaction_history: z.array(TransactionSchema).max(100, 'transaction_history too large').optional().default([]),
   metadata: z.record(z.any()).optional()
-});
+}).strict();
 
 // ============================================================
 // Response schema — all 10 required fields
