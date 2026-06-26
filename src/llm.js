@@ -32,6 +32,7 @@ async function classifyIntent(complaint) {
 
   const model = genAI.getGenerativeModel({
     model: MODEL_NAME,
+    generationConfig: { temperature: 0.0 },
     systemInstruction: `You are a financial investigator API. Classify the user's complaint into EXACTLY one of these case types:
 - phishing_or_social_engineering
 - agent_cash_in_issue
@@ -69,13 +70,17 @@ async function draftResponses(complaint, caseType, evidenceVerdict, matchedTxn, 
 
   const model = genAI.getGenerativeModel({
     model: MODEL_NAME,
-    generationConfig: { responseMimeType: "application/json" },
+    generationConfig: { 
+      temperature: 0.0,
+      responseMimeType: "application/json" 
+    },
     systemInstruction: `You are a customer support AI for a mobile financial service.
 Given the investigation details, draft two strings:
 1. "agent_summary": A factual 1-sentence summary for the internal human agent. Include the transaction ID and amount if available.
 2. "customer_reply": A professional response to the customer in their language (${language === 'bn' ? 'Bengali' : 'English'}).
    CRITICAL SAFETY RULE: You MUST append this exact sentence at the end of the customer_reply: "Please do not share your PIN or OTP with anyone." (Translate to Bengali if language is bn: "অনুগ্রহ করে আপনার পিন বা ওটিপি কারও সাথে শেয়ার করবেন না।")
    You MUST NEVER promise a refund.
+   ANTI-HALLUCINATION RULE: You MUST NOT invent, guess, or hallucinate any transaction IDs, amounts, names, or facts not strictly provided in the prompt. If information is missing, speak generally.
 
 Return a JSON object exactly like this:
 {"agent_summary": "...", "customer_reply": "..."}`

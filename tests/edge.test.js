@@ -216,6 +216,30 @@ describe('Safety guardrails always hold', () => {
 });
 
 // ============================================================
+// Anti-Hallucination tests — LLM must not invent details
+// ============================================================
+describe('Anti-Hallucination guardrails', () => {
+  it('does not invent transaction IDs or amounts when none are provided', async () => {
+    const res = await request(app).post('/analyze-ticket').send({
+      ticket_id: 'TKT-HAL-01',
+      complaint: 'I lost some money from my account, please check.',
+      transaction_history: [] // No transactions provided
+    });
+    expect(res.status).toBe(200);
+    const summary = res.body.agent_summary;
+    const reply = res.body.customer_reply;
+    
+    // Should not hallucinate a TXN ID
+    expect(summary).not.toMatch(/TXN-\d+/i);
+    expect(reply).not.toMatch(/TXN-\d+/i);
+    
+    // Should not hallucinate a specific amount (like 500, 1000)
+    expect(summary).not.toMatch(/\b(100|500|1000|5000)\b/);
+    expect(reply).not.toMatch(/\b(100|500|1000|5000)\b/);
+  });
+});
+
+// ============================================================
 // Performance: response must come back within 10s in tests
 // (Real limit is 30s — this is a conservative test threshold)
 // ============================================================
