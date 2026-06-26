@@ -30,7 +30,7 @@ cp .env.example .env
 
 # 3. Start
 npm start
-# Server listening on http://localhost:3000
+# Server listening on https://queuestorm-investigator-beta.vercel.app
 ```
 
 ### Option 2: Docker
@@ -45,7 +45,7 @@ docker run -p 3000:3000 queuestorm
 ## Example Request
 
 ```bash
-curl -X POST http://localhost:3000/analyze-ticket \
+curl -X POST https://queuestorm-investigator-beta.vercel.app/analyze-ticket \
   -H "Content-Type: application/json" \
   -d '{
     "ticket_id": "TKT-001",
