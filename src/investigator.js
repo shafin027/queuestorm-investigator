@@ -217,7 +217,7 @@ function findDuplicatePair(transactions) {
 // Main investigation function
 // Returns all investigation results consumed by server.js
 // ============================================================
-function investigate(ticket) {
+function investigate(ticket, externalCaseType = null) {
   const {
     ticket_id,
     complaint,
@@ -226,8 +226,8 @@ function investigate(ticket) {
     language = 'en'
   } = ticket;
 
-  // Step 1: Classify the complaint
-  const caseType = classifyComplaintType(complaint);
+  // Step 1: Classify the complaint (use LLM external case type if provided, otherwise fallback to Regex)
+  const caseType = externalCaseType || classifyComplaintType(complaint);
 
   // Step 2: Extract entities from complaint
   const amounts = extractAmounts(complaint);

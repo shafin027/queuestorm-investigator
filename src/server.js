@@ -12,6 +12,7 @@ const { investigate } = require('./investigator');
 const { routeToDepartment, assessSeverity, requiresHumanReview } = require('./classifier');
 const { validateSafety, detectAdversarialInjection } = require('./safety');
 const { generateAgentSummary, generateNextAction, generateCustomerReply } = require('./generator');
+const llm = require('./llm');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -60,7 +61,7 @@ app.get('/analyze-ticket', (req, res) => {
   });
 });
 
-app.post('/analyze-ticket', (req, res) => {
+app.post('/analyze-ticket', async (req, res) => {
   // Set timeout guard
   const timeout = setTimeout(() => {
     if (!res.headersSent) {
@@ -96,7 +97,15 @@ app.post('/analyze-ticket', (req, res) => {
     }
 
     // ─── Step 3: Run investigation ─────────────────────────────────────
-    const investigation = investigate(validatedRequest);
+    let externalCaseType = null;
+    try {
+      if (process.env.GEMINI_API_KEY) {
+        externalCaseType = await llm.classifyIntent(validatedRequest.complaint);
+      }
+    } catch (llmErr) {
+      console.warn('[LLM Fallback] Intent Classification failed:', llmErr.message);
+    }
+    const investigation = investigate(validatedRequest, externalCaseType);
 
     // ─── Step 4: Assess severity ───────────────────────────────────────
     const severity = assessSeverity(
@@ -123,27 +132,47 @@ app.post('/analyze-ticket', (req, res) => {
     );
 
     // ─── Step 7: Generate responses ────────────────────────────────────
-    const agentSummary = generateAgentSummary(
-      validatedRequest.complaint,
-      investigation.matchedTxn,
-      investigation.caseType,
-      investigation.evidenceVerdict,
-      investigation.allMatches
-    );
+    let agentSummary, customerReply;
+    try {
+      if (process.env.GEMINI_API_KEY) {
+        const llmDrafts = await llm.draftResponses(
+          validatedRequest.complaint,
+          investigation.caseType,
+          investigation.evidenceVerdict,
+          investigation.matchedTxn,
+          investigation.language,
+          investigation.userType
+        );
+        agentSummary = llmDrafts.agent_summary;
+        customerReply = llmDrafts.customer_reply;
+      } else {
+        throw new Error('No API Key');
+      }
+    } catch (llmErr) {
+      if (process.env.GEMINI_API_KEY) {
+        console.warn('[LLM Fallback] Response Drafting failed:', llmErr.message);
+      }
+      agentSummary = generateAgentSummary(
+        validatedRequest.complaint,
+        investigation.matchedTxn,
+        investigation.caseType,
+        investigation.evidenceVerdict,
+        investigation.allMatches
+      );
+      customerReply = generateCustomerReply(
+        investigation.caseType,
+        investigation.matchedTxn,
+        investigation.language,
+        investigation.userType,
+        investigation.evidenceVerdict,
+        investigation.isAmbiguous
+      );
+    }
 
     const recommendedNextAction = generateNextAction(
       investigation.caseType,
       department,
       investigation.matchedTxn,
-      investigation.evidenceVerdict,
-      investigation.isAmbiguous
-    );
-
-    const customerReply = generateCustomerReply(
-      investigation.caseType,
-      investigation.matchedTxn,
-      investigation.language,
-      investigation.userType,
       investigation.evidenceVerdict,
       investigation.isAmbiguous
     );
