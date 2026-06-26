@@ -106,7 +106,7 @@ The service uses a **Hybrid Rule + AI Engine**, combining the reliability of det
 4. **Day Reference** — Detects "today/yesterday/আজ/গতকাল" for time-based matching.
 5. **Transaction Scoring** — Scores each transaction: exact amount (+50), day match (+20), type match (+10), counterparty mention (+30).
 6. **Ambiguity Detection** — If multiple equally-scored transactions exist with different counterparties → `relevant_transaction_id = null`, verdict = `insufficient_data`.
-7. **Established Recipient Pattern** — If 3+ prior transfers to the same counterparty on a "wrong transfer" claim → `inconsistent`.
+7. **Established Recipient Pattern** — If 2+ prior transfers to the same counterparty on a "wrong transfer" claim → `inconsistent`.
 8. **Duplicate Detection** — Two identical payments (same amount + counterparty) within 120 seconds → `consistent` duplicate claim, second transaction flagged as duplicate.
 
 ### Safety Guardrails

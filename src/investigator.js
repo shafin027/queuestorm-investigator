@@ -348,8 +348,8 @@ function investigate(ticket, externalCaseType = null) {
   } else if (caseType === 'wrong_transfer') {
     // Check for established recipient pattern
     const transferCount = getRecipientTransferCount(matchedTxn.counterparty, transaction_history);
-    if (transferCount >= 3) {
-      // 3+ transfers to same counterparty strongly contradicts "wrong transfer"
+    if (transferCount >= 2) {
+      // 2+ transfers to same counterparty strongly contradicts "wrong transfer"
       evidenceVerdict = 'inconsistent';
       reasonCodes = ['wrong_transfer_claim', 'established_recipient_pattern', 'evidence_inconsistent'];
       confidence = 0.75;
