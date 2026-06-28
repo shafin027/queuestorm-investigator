@@ -11,7 +11,7 @@ require('dotenv').config();
 const { AnalyzeTicketRequestSchema, AnalyzeTicketResponseSchema } = require('./schemas');
 const { investigate } = require('./investigator');
 const { routeToDepartment, assessSeverity, requiresHumanReview } = require('./classifier');
-const { validateSafety, detectAdversarialInjection } = require('./safety');
+const { validateSafety, detectAdversarialInjection, sanitizeComplaint, sanitizeOutput } = require('./safety');
 const { generateAgentSummary, generateNextAction, generateCustomerReply } = require('./generator');
 const llm = require('./llm');
 
@@ -22,9 +22,24 @@ const REQUEST_TIMEOUT_MS = 29000; // 29s — leave 1s buffer under 30s limit
 // ============================================================
 // Middleware
 // ============================================================
-app.use(helmet()); // Secure HTTP headers
+// Configure helmet to allow scripts from CDN (Google Fonts, etc.)
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https://picsum.photos"],
+        connectSrc: ["'self'"]
+      }
+    }
+  })
+);
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
+app.use(express.static('public'));
 
 // Request logging (no secrets logged)
 app.use((req, res, next) => {
@@ -40,16 +55,9 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-// ============================================================
-// GET /
-// Root endpoint to verify API is running
-// ============================================================
+// GET / returns the main dashboard (handled by static server, fallback route here just in case)
 app.get('/', (req, res) => {
-  res.status(200).json({
-    name: 'QueueStorm Investigator API',
-    status: 'running',
-    endpoints: ['GET /health', 'POST /analyze-ticket']
-  });
+  res.sendFile('index.html', { root: 'public' });
 });
 
 // ============================================================
@@ -93,10 +101,12 @@ app.post('/analyze-ticket', async (req, res) => {
       });
     }
 
-    // ─── Step 2: Check for adversarial injection in complaint ─────────
+    // ─── Step 2: Detect and SANITIZE adversarial injection ────────────
     const isAdversarial = detectAdversarialInjection(validatedRequest.complaint);
-    // If adversarial, we still process normally — just log it
-    // The investigation engine is deterministic and won't be swayed
+    // CRITICAL: Sanitize the complaint before passing to LLM
+    // The raw complaint is kept for investigation (deterministic) but
+    // the LLM gets a cleaned version to prevent prompt injection
+    const sanitizedComplaint = sanitizeComplaint(validatedRequest.complaint);
     if (isAdversarial) {
       console.warn(`[SECURITY] Adversarial injection detected in ticket ${validatedRequest.ticket_id}`);
     }
@@ -105,11 +115,13 @@ app.post('/analyze-ticket', async (req, res) => {
     let externalCaseType = null;
     try {
       if (process.env.GEMINI_API_KEY) {
-        externalCaseType = await llm.classifyIntent(validatedRequest.complaint);
+        // Use SANITIZED complaint for LLM classification
+        externalCaseType = await llm.classifyIntent(sanitizedComplaint);
       }
     } catch (llmErr) {
       console.warn('[LLM Fallback] Intent Classification failed:', llmErr.message);
     }
+    // Use ORIGINAL complaint for deterministic investigation (it's regex-based, not LLM)
     const investigation = investigate(validatedRequest, externalCaseType);
 
     // ─── Step 4: Assess severity ───────────────────────────────────────
@@ -138,10 +150,13 @@ app.post('/analyze-ticket', async (req, res) => {
 
     // ─── Step 7: Generate responses ────────────────────────────────────
     let agentSummary, customerReply;
+    let usedLLM = false;
+
     try {
       if (process.env.GEMINI_API_KEY) {
+        // Use SANITIZED complaint for LLM drafting
         const llmDrafts = await llm.draftResponses(
-          validatedRequest.complaint,
+          sanitizedComplaint,
           investigation.caseType,
           investigation.evidenceVerdict,
           investigation.matchedTxn,
@@ -150,6 +165,7 @@ app.post('/analyze-ticket', async (req, res) => {
         );
         agentSummary = llmDrafts.agent_summary;
         customerReply = llmDrafts.customer_reply;
+        usedLLM = true;
       } else {
         throw new Error('No API Key');
       }
@@ -182,11 +198,20 @@ app.post('/analyze-ticket', async (req, res) => {
       investigation.isAmbiguous
     );
 
-    // ─── Step 8: Safety validation ─────────────────────────────────────
-    const safetyCheck = validateSafety(customerReply, recommendedNextAction);
+    // ─── Step 8: DEFENSE-IN-DEPTH Safety validation ────────────────────
+    // Layer 1: Sanitize LLM output (replace unsafe phrases with safe ones)
+    if (usedLLM) {
+      customerReply = sanitizeOutput(customerReply);
+      agentSummary = sanitizeOutput(agentSummary);
+    }
+
+    // Layer 2: Validate ALL three text output fields
+    const safetyCheck = validateSafety(customerReply, recommendedNextAction, agentSummary);
+
     if (!safetyCheck.isSafe) {
       console.error(`[SAFETY VIOLATION] Ticket ${validatedRequest.ticket_id}:`, safetyCheck.violations);
-      // Fallback to the safest possible deterministic reply
+
+      // Layer 3: Fall back to deterministic templates (known-safe)
       customerReply = generateCustomerReply(
         investigation.caseType,
         investigation.matchedTxn,
@@ -195,6 +220,24 @@ app.post('/analyze-ticket', async (req, res) => {
         investigation.evidenceVerdict,
         investigation.isAmbiguous
       );
+      agentSummary = generateAgentSummary(
+        validatedRequest.complaint,
+        investigation.matchedTxn,
+        investigation.caseType,
+        investigation.evidenceVerdict,
+        investigation.allMatches
+      );
+
+      // Layer 4: Re-validate even the deterministic output (belt + suspenders)
+      const recheck = validateSafety(customerReply, recommendedNextAction, agentSummary);
+      if (!recheck.isSafe) {
+        console.error(`[SAFETY CRITICAL] Even deterministic templates failed safety!`, recheck.violations);
+        // Nuclear fallback: absolute minimum safe response
+        customerReply = investigation.language === 'bn'
+          ? 'আপনার অনুরোধের জন্য ধন্যবাদ। আমাদের দল আপনার বিষয়টি পর্যালোচনা করবে এবং অফিসিয়াল চ্যানেলের মাধ্যমে আপনাকে জানাবে। অনুগ্রহ করে কারো সাথে আপনার পিন বা ওটিপি শেয়ার করবেন না।'
+          : 'Thank you for reaching out. Our team will review your case and contact you through official channels. Please do not share your PIN or OTP with anyone.';
+        agentSummary = `Customer reported an issue (ticket ${validatedRequest.ticket_id}). Requires manual review.`;
+      }
     }
 
     // ─── Step 9: Build final response ──────────────────────────────────

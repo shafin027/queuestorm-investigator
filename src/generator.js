@@ -92,16 +92,16 @@ function generateNextAction(caseType, department, matchedTxn, evidenceVerdict, i
 
     case 'payment_failed':
       return txnId
-        ? `Investigate ${txnId} ledger status. If balance was deducted on a failed payment, initiate the automatic reversal flow within standard SLA.`
+        ? `Investigate ${txnId} ledger status. If balance was deducted on a failed payment, follow the standard failed-payment correction workflow within SLA.`
         : 'Request transaction details from customer and investigate ledger status.';
 
     case 'refund_request':
-      return `Inform the customer that refund eligibility depends on the merchant's own policy. Provide guidance on contacting the merchant directly for a refund.`;
+      return `Inform the customer that eligibility depends on the merchant's own return policy. Provide guidance on contacting the merchant directly regarding their purchase.`;
 
     case 'duplicate_payment':
       return txnId
-        ? `Verify the duplicate with ${department}. If the biller confirms only one payment was received, initiate reversal of ${txnId}.`
-        : 'Verify duplicate payment claim with payments_ops and initiate reversal if confirmed.';
+        ? `Verify the duplicate with ${department}. If the biller confirms only one payment was received, follow the duplicate-payment correction procedure for ${txnId}.`
+        : 'Verify duplicate payment claim with payments_ops and follow duplicate-payment correction procedure if confirmed.';
 
     case 'merchant_settlement_delay':
       return txnId

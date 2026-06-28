@@ -8,8 +8,9 @@ COPY package*.json ./
 # Install production dependencies only
 RUN npm ci --only=production
 
-# Copy source code
+# Copy source code and public assets
 COPY src ./src
+COPY public ./public
 
 # Expose API port
 EXPOSE 3000

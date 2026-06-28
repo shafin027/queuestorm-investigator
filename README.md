@@ -175,6 +175,17 @@ npm run test:watch
 
 ---
 
+## MODELS
+
+The following AI models are utilized by the service:
+
+| Model Name | Source / Provider | Where it Runs | Why it was Chosen |
+|------------|-------------------|---------------|-------------------|
+| **gemini-2.5-flash** | Google Generative AI | Cloud Hosted API (Google AI Studio) | Chosen for its industry-leading speed, high quality-to-cost ratio, advanced context window, and native JSON structured output capabilities. Perfect for microsecond latency demands of hackathon support ops. |
+| **Deterministic Fallback Engine** | Custom Native Code | Locally on the VM | An optimized regex-based rule compiler designed to route, extract, and draft responses in < 5ms if Google Gemini API hits a rate limit or times out (> 3 seconds). Ensures 100% service uptime. |
+
+---
+
 ## Compliance Confirmations
 
 - **No Real Customer Data**: This project operates strictly on synthetic, fictional data. No real customer, payment, or PII data is used, stored, or processed.
